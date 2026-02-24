@@ -96,3 +96,52 @@ final class HK7WeiMath {
         BigInteger aa = a == null ? BigInteger.ZERO : a;
         BigInteger bb = b == null ? BigInteger.ZERO : b;
         if (bb.compareTo(aa) > 0) return BigInteger.ZERO;
+        return aa.subtract(bb);
+    }
+
+    static boolean isZeroOrNegative(BigInteger v) {
+        return v == null || v.signum() <= 0;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// EVM-STYLE ADDRESS VALIDATION
+// -----------------------------------------------------------------------------
+
+final class HK7AddressValidator {
+    private static final Pattern EVM_ADDRESS = Pattern.compile("^0x[a-fA-F0-9]{40}$");
+
+    static boolean isValid(String address) {
+        return address != null && EVM_ADDRESS.matcher(address.trim()).matches();
+    }
+
+    static String normalize(String address) {
+        if (address == null) return null;
+        String s = address.trim();
+        return s.toLowerCase().startsWith("0x") ? s : "0x" + s;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// FEE CALCULATOR (immutable basis points; EVM-safe)
+// -----------------------------------------------------------------------------
+
+final class HK7FeeCalculator {
+    private static final int BPS_MAX = 10_000;
+    private final int feeBps;
+
+    HK7FeeCalculator(int feeBps) {
+        this.feeBps = Math.max(0, Math.min(feeBps, BPS_MAX));
+    }
+
+    BigInteger computeFee(BigInteger amountWei) {
+        if (amountWei == null || amountWei.signum() <= 0 || feeBps == 0) return BigInteger.ZERO;
+        return amountWei.multiply(BigInteger.valueOf(feeBps)).divide(BigInteger.valueOf(BPS_MAX));
+    }
+
+    BigInteger amountAfterFee(BigInteger amountWei) {
+        return HK7WeiMath.subSafe(amountWei == null ? BigInteger.ZERO : amountWei, computeFee(amountWei));
+    }
+
+    int getFeeBps() { return feeBps; }
+}
