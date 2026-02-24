@@ -390,3 +390,52 @@ final class HK7BunkerInfo {
     }
 
     public String getBunkerId() { return bunkerId; }
+    public String getTagHash() { return tagHash; }
+    public BigInteger getBalance() { return balance; }
+    public long getCreatedAtBlock() { return createdAtBlock; }
+    public boolean isSettled() { return settled; }
+}
+
+// -----------------------------------------------------------------------------
+// EVENT LISTENER INTERFACE
+// -----------------------------------------------------------------------------
+
+interface HK7EventListener {
+    void onBunkerRegistered(HK7BunkerRegistered e);
+    void onDeposited(HK7Deposited e);
+    void onBunkerSettled(HK7BunkerSettled e);
+    void onTreasuryCredited(HK7TreasuryCredited e);
+    void onVaultFrozen(HK7VaultFrozen e);
+    void onVaultThawed(HK7VaultThawed e);
+}
+
+// -----------------------------------------------------------------------------
+// BUNKER STATS (aggregate view for one bunker)
+// -----------------------------------------------------------------------------
+
+final class HK7BunkerStats {
+    private final String bunkerId;
+    private final BigInteger balance;
+    private final int depositorCount;
+    private final boolean settled;
+    private final long createdAtBlock;
+
+    HK7BunkerStats(String bunkerId, BigInteger balance, int depositorCount, boolean settled, long createdAtBlock) {
+        this.bunkerId = bunkerId;
+        this.balance = balance == null ? BigInteger.ZERO : balance;
+        this.depositorCount = depositorCount;
+        this.settled = settled;
+        this.createdAtBlock = createdAtBlock;
+    }
+
+    public String getBunkerId() { return bunkerId; }
+    public BigInteger getBalance() { return balance; }
+    public int getDepositorCount() { return depositorCount; }
+    public boolean isSettled() { return settled; }
+    public long getCreatedAtBlock() { return createdAtBlock; }
+}
+
+// -----------------------------------------------------------------------------
+// VAULT STATS (global aggregate)
+// -----------------------------------------------------------------------------
+
