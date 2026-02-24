@@ -145,3 +145,52 @@ final class HK7FeeCalculator {
 
     int getFeeBps() { return feeBps; }
 }
+
+// -----------------------------------------------------------------------------
+// QUOTA MANAGER (per-bunker and global caps)
+// -----------------------------------------------------------------------------
+
+final class HK7QuotaManager {
+    private final BigInteger globalDepositCap;
+    private final BigInteger defaultBunkerCap;
+    private final Map<String, BigInteger> bunkerCaps = new ConcurrentHashMap<>();
+
+    HK7QuotaManager(BigInteger globalDepositCap, BigInteger defaultBunkerCap) {
+        this.globalDepositCap = globalDepositCap == null || globalDepositCap.signum() < 0 ? BigInteger.ZERO : globalDepositCap;
+        this.defaultBunkerCap = defaultBunkerCap == null || defaultBunkerCap.signum() < 0 ? BigInteger.ZERO : defaultBunkerCap;
+    }
+
+    void setBunkerCap(String bunkerId, BigInteger cap) {
+        if (bunkerId != null) bunkerCaps.put(bunkerId, cap == null ? defaultBunkerCap : cap);
+    }
+
+    BigInteger getBunkerCap(String bunkerId) {
+        return bunkerCaps.getOrDefault(bunkerId, defaultBunkerCap);
+    }
+
+    boolean wouldExceedBunkerCap(String bunkerId, BigInteger currentBalance, BigInteger addAmount) {
+        BigInteger cap = getBunkerCap(bunkerId);
+        if (cap.signum() == 0) return false;
+        BigInteger next = (currentBalance == null ? BigInteger.ZERO : currentBalance).add(addAmount == null ? BigInteger.ZERO : addAmount);
+        return next.compareTo(cap) > 0;
+    }
+
+    boolean wouldExceedGlobalCap(BigInteger currentTotal, BigInteger addAmount) {
+        if (globalDepositCap.signum() == 0) return false;
+        BigInteger next = (currentTotal == null ? BigInteger.ZERO : currentTotal).add(addAmount == null ? BigInteger.ZERO : addAmount);
+        return next.compareTo(globalDepositCap) > 0;
+    }
+
+    BigInteger getGlobalDepositCap() { return globalDepositCap; }
+    BigInteger getDefaultBunkerCap() { return defaultBunkerCap; }
+}
+
+// -----------------------------------------------------------------------------
+// DEPOSIT LEDGER (depositor -> amount per bunker; for accounting)
+// -----------------------------------------------------------------------------
+
+final class HK7DepositLedger {
+    private final Map<String, Map<String, BigInteger>> bunkerDeposits = new ConcurrentHashMap<>();
+
+    void recordDeposit(String bunkerId, String depositor, BigInteger amountWei) {
+        if (bunkerId == null || amountWei == null || amountWei.signum() <= 0) return;
