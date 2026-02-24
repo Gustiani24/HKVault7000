@@ -194,3 +194,52 @@ final class HK7DepositLedger {
 
     void recordDeposit(String bunkerId, String depositor, BigInteger amountWei) {
         if (bunkerId == null || amountWei == null || amountWei.signum() <= 0) return;
+        bunkerDeposits.computeIfAbsent(bunkerId, k -> new ConcurrentHashMap<>())
+            .merge(depositor != null ? depositor : "0x0000000000000000000000000000000000000000", amountWei, HK7WeiMath::addSafe);
+    }
+
+    BigInteger getDepositBy(String bunkerId, String depositor) {
+        Map<String, BigInteger> m = bunkerDeposits.get(bunkerId);
+        return m == null ? BigInteger.ZERO : m.getOrDefault(depositor, BigInteger.ZERO);
+    }
+
+    int getDepositorCount(String bunkerId) {
+        Map<String, BigInteger> m = bunkerDeposits.get(bunkerId);
+        return m == null ? 0 : m.size();
+    }
+
+    Set<String> getDepositors(String bunkerId) {
+        Map<String, BigInteger> m = bunkerDeposits.get(bunkerId);
+        return m == null ? Set.of() : Collections.unmodifiableSet(new HashSet<>(m.keySet()));
+    }
+
+    Map<String, BigInteger> getBunkerDepositsSnapshot(String bunkerId) {
+        Map<String, BigInteger> m = bunkerDeposits.get(bunkerId);
+        return m == null ? Map.of() : new HashMap<>(m);
+    }
+}
+
+// -----------------------------------------------------------------------------
+// AUDIT LOG (append-only entries)
+// -----------------------------------------------------------------------------
+
+final class HK7AuditEntry {
+    private final long timestamp;
+    private final String action;
+    private final String actor;
+    private final String detail;
+
+    HK7AuditEntry(long timestamp, String action, String actor, String detail) {
+        this.timestamp = timestamp;
+        this.action = action != null ? action : "";
+        this.actor = actor != null ? actor : "";
+        this.detail = detail != null ? detail : "";
+    }
+
+    public long getTimestamp() { return timestamp; }
+    public String getAction() { return action; }
+    public String getActor() { return actor; }
+    public String getDetail() { return detail; }
+}
+
+final class HK7AuditLog {
