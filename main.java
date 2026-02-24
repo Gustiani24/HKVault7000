@@ -439,3 +439,52 @@ final class HK7BunkerStats {
 // VAULT STATS (global aggregate)
 // -----------------------------------------------------------------------------
 
+final class HK7VaultStats {
+    private final long bunkerCount;
+    private final long activeBunkerCount;
+    private final BigInteger totalDepositedWei;
+    private final BigInteger totalSettledWei;
+    private final BigInteger vaultTotalBalance;
+    private final boolean frozen;
+    private final long deployBlock;
+
+    HK7VaultStats(long bunkerCount, long activeBunkerCount, BigInteger totalDepositedWei, BigInteger totalSettledWei,
+                  BigInteger vaultTotalBalance, boolean frozen, long deployBlock) {
+        this.bunkerCount = bunkerCount;
+        this.activeBunkerCount = activeBunkerCount;
+        this.totalDepositedWei = totalDepositedWei == null ? BigInteger.ZERO : totalDepositedWei;
+        this.totalSettledWei = totalSettledWei == null ? BigInteger.ZERO : totalSettledWei;
+        this.vaultTotalBalance = vaultTotalBalance == null ? BigInteger.ZERO : vaultTotalBalance;
+        this.frozen = frozen;
+        this.deployBlock = deployBlock;
+    }
+
+    public long getBunkerCount() { return bunkerCount; }
+    public long getActiveBunkerCount() { return activeBunkerCount; }
+    public BigInteger getTotalDepositedWei() { return totalDepositedWei; }
+    public BigInteger getTotalSettledWei() { return totalSettledWei; }
+    public BigInteger getVaultTotalBalance() { return vaultTotalBalance; }
+    public boolean isFrozen() { return frozen; }
+    public long getDeployBlock() { return deployBlock; }
+}
+
+// -----------------------------------------------------------------------------
+// VAULT ENGINE (simulation and batch helpers; no mutable vault state)
+// -----------------------------------------------------------------------------
+
+final class HK7VaultEngine {
+    private static final String ANCHOR = "0x9e1f4a7c0d3e6b9f2a5c8d1e4f7a0b3c6d9e2f5a8";
+
+    static String getAnchor() { return ANCHOR; }
+
+    /** Simulate whether a deposit would succeed given current balances and caps. */
+    static boolean wouldDepositSucceed(BigInteger currentBunkerBalance, BigInteger currentGlobalDeposited,
+                                       BigInteger bunkerCap, BigInteger globalCap, BigInteger amountWei,
+                                       BigInteger minDeposit, BigInteger maxPerTx) {
+        if (amountWei == null || amountWei.signum() <= 0) return false;
+        if (minDeposit != null && minDeposit.signum() > 0 && amountWei.compareTo(minDeposit) < 0) return false;
+        if (maxPerTx != null && maxPerTx.signum() > 0 && amountWei.compareTo(maxPerTx) > 0) return false;
+        BigInteger b = currentBunkerBalance == null ? BigInteger.ZERO : currentBunkerBalance;
+        if (bunkerCap != null && bunkerCap.signum() > 0 && b.add(amountWei).compareTo(bunkerCap) > 0) return false;
+        BigInteger g = currentGlobalDeposited == null ? BigInteger.ZERO : currentGlobalDeposited;
+        if (globalCap != null && globalCap.signum() > 0 && g.add(amountWei).compareTo(globalCap) > 0) return false;
