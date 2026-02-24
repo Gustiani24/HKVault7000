@@ -635,3 +635,52 @@ final class HK7Runbook {
             case STEP_AUDIT: return "Export audit / summary";
             default: return "Unknown step";
         }
+    }
+
+    static List<String> preconditionsForRegister(HKVault7000 vault) {
+        List<String> out = new ArrayList<>();
+        if (vault.isFrozen()) out.add("Vault must not be frozen");
+        if (vault.getBunkerCount() >= HKVault7000.HK7_MAX_BUNKERS) out.add("Bunker limit reached");
+        return out;
+    }
+
+    static List<String> preconditionsForDeposit(HKVault7000 vault, String bunkerId, BigInteger amountWei) {
+        List<String> out = new ArrayList<>();
+        if (vault.isFrozen()) out.add("Vault must not be frozen");
+        if (!vault.bunkerExists(bunkerId)) out.add("Bunker must exist");
+        if (vault.isBunkerSettled(bunkerId)) out.add("Bunker must not be settled");
+        if (amountWei == null || amountWei.signum() <= 0) out.add("Amount must be positive");
+        if (vault.getVaultConfig().getMinDepositWei().signum() > 0 && amountWei.compareTo(vault.getVaultConfig().getMinDepositWei()) < 0) {
+            out.add("Amount below minimum deposit");
+        }
+        return out;
+    }
+
+    static List<String> preconditionsForSettle(HKVault7000 vault, String bunkerId) {
+        List<String> out = new ArrayList<>();
+        if (vault.isFrozen()) out.add("Vault must not be frozen");
+        if (!vault.bunkerExists(bunkerId)) out.add("Bunker must exist");
+        if (vault.isBunkerSettled(bunkerId)) out.add("Bunker must not already be settled");
+        return out;
+    }
+
+    static List<Integer> standardSequence() {
+        return List.of(STEP_REGISTER, STEP_DEPOSIT, STEP_SETTLE, STEP_AUDIT);
+    }
+
+    static String runbookSummary() {
+        return "HK7 Runbook: 1=Register 2=Deposit 3=Settle 4=Freeze 5=Thaw 6=Audit. Custodian required for 1,3,4,5.";
+    }
+}
+
+// -----------------------------------------------------------------------------
+// ENCODING UTILS (hex / bytes for EVM compatibility)
+// -----------------------------------------------------------------------------
+
+final class HK7EncodingUtils {
+    private static final String HEX = "0123456789abcdef";
+
+    static String toHex(byte[] bytes) {
+        if (bytes == null) return "";
+        StringBuilder sb = new StringBuilder(bytes.length * 2);
+        for (byte b : bytes) {
