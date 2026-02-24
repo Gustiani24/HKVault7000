@@ -341,3 +341,52 @@ final class HK7BunkerSettled {
 }
 
 final class HK7TreasuryCredited {
+    private final String treasury;
+    private final BigInteger amountWei;
+    private final long atBlock;
+    HK7TreasuryCredited(String treasury, BigInteger amountWei, long atBlock) {
+        this.treasury = treasury;
+        this.amountWei = amountWei;
+        this.atBlock = atBlock;
+    }
+    public String getTreasury() { return treasury; }
+    public BigInteger getAmountWei() { return amountWei; }
+    public long getAtBlock() { return atBlock; }
+}
+
+final class HK7VaultFrozen {
+    private final String by;
+    private final long atBlock;
+    HK7VaultFrozen(String by, long atBlock) { this.by = by; this.atBlock = atBlock; }
+    public String getBy() { return by; }
+    public long getAtBlock() { return atBlock; }
+}
+
+final class HK7VaultThawed {
+    private final String by;
+    private final long atBlock;
+    HK7VaultThawed(String by, long atBlock) { this.by = by; this.atBlock = atBlock; }
+    public String getBy() { return by; }
+    public long getAtBlock() { return atBlock; }
+}
+
+// -----------------------------------------------------------------------------
+// BUNKER INFO (immutable view)
+// -----------------------------------------------------------------------------
+
+final class HK7BunkerInfo {
+    private final String bunkerId;
+    private final String tagHash;
+    private final BigInteger balance;
+    private final long createdAtBlock;
+    private final boolean settled;
+
+    HK7BunkerInfo(String bunkerId, String tagHash, BigInteger balance, long createdAtBlock, boolean settled) {
+        this.bunkerId = bunkerId;
+        this.tagHash = tagHash;
+        this.balance = balance == null ? BigInteger.ZERO : balance;
+        this.createdAtBlock = createdAtBlock;
+        this.settled = settled;
+    }
+
+    public String getBunkerId() { return bunkerId; }
