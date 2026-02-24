@@ -537,3 +537,52 @@ final class HK7StateEncoder {
     static String encodeSummary(HKVault7000 vault) {
         StringBuilder sb = new StringBuilder();
         sb.append("HK7|").append(HKVault7000.HK7_VERSION).append("|");
+        sb.append("custodian=").append(vault.getCustodian()).append("|");
+        sb.append("treasury=").append(vault.getTreasury()).append("|");
+        sb.append("deployBlock=").append(vault.getDeployBlock()).append("|");
+        sb.append("frozen=").append(vault.isFrozen()).append("|");
+        sb.append("bunkerCount=").append(vault.getBunkerCount()).append("|");
+        sb.append("totalDeposited=").append(vault.getTotalDepositedWei()).append("|");
+        sb.append("totalSettled=").append(vault.getTotalSettledWei()).append("|");
+        sb.append("namespace=").append(HKVault7000.HK7_NAMESPACE_HEX);
+        return sb.toString();
+    }
+
+    static List<String> encodeBunkerLines(HKVault7000 vault) {
+        List<String> out = new ArrayList<>();
+        for (String id : vault.getAllBunkerIds()) {
+            HK7BunkerInfo info = vault.getBunkerInfo(id);
+            out.add(String.format("bunker|%s|%s|%s|%d|%s", id, info.getTagHash(), info.getBalance(), info.getCreatedAtBlock(), info.isSettled()));
+        }
+        return out;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// STATE DECODER (parse summary line; no mutation)
+// -----------------------------------------------------------------------------
+
+final class HK7StateDecoder {
+    static Map<String, String> decodeSummary(String line) {
+        Map<String, String> m = new HashMap<>();
+        if (line == null || !line.startsWith("HK7|")) return m;
+        String[] parts = line.split("\\|");
+        for (int i = 1; i < parts.length; i++) {
+            String p = parts[i];
+            int eq = p.indexOf('=');
+            if (eq > 0) m.put(p.substring(0, eq), p.substring(eq + 1));
+        }
+        return m;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// INTEGRITY CHECK (invariants for safe mainnet-style behavior)
+// -----------------------------------------------------------------------------
+
+final class HK7IntegrityCheck {
+    /** Sum of active bunker balances must not exceed total deposited (no double-spend). */
+    static boolean checkBalanceInvariant(HKVault7000 vault) {
+        BigInteger active = vault.getVaultTotalBalance();
+        BigInteger totalDep = vault.getTotalDepositedWei();
+        BigInteger totalSet = vault.getTotalSettledWei();
