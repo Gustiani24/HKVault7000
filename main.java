@@ -292,3 +292,52 @@ final class HK7VaultConfig {
 }
 
 // -----------------------------------------------------------------------------
+// EVENTS (immutable payloads)
+// -----------------------------------------------------------------------------
+
+final class HK7BunkerRegistered {
+    private final String bunkerId;
+    private final String tagHash;
+    private final long atBlock;
+    HK7BunkerRegistered(String bunkerId, String tagHash, long atBlock) {
+        this.bunkerId = bunkerId;
+        this.tagHash = tagHash;
+        this.atBlock = atBlock;
+    }
+    public String getBunkerId() { return bunkerId; }
+    public String getTagHash() { return tagHash; }
+    public long getAtBlock() { return atBlock; }
+}
+
+final class HK7Deposited {
+    private final String bunkerId;
+    private final String from;
+    private final BigInteger amountWei;
+    private final long atBlock;
+    HK7Deposited(String bunkerId, String from, BigInteger amountWei, long atBlock) {
+        this.bunkerId = bunkerId;
+        this.from = from;
+        this.amountWei = amountWei;
+        this.atBlock = atBlock;
+    }
+    public String getBunkerId() { return bunkerId; }
+    public String getFrom() { return from; }
+    public BigInteger getAmountWei() { return amountWei; }
+    public long getAtBlock() { return atBlock; }
+}
+
+final class HK7BunkerSettled {
+    private final String bunkerId;
+    private final BigInteger amountWei;
+    private final long atBlock;
+    HK7BunkerSettled(String bunkerId, BigInteger amountWei, long atBlock) {
+        this.bunkerId = bunkerId;
+        this.amountWei = amountWei;
+        this.atBlock = atBlock;
+    }
+    public String getBunkerId() { return bunkerId; }
+    public BigInteger getAmountWei() { return amountWei; }
+    public long getAtBlock() { return atBlock; }
+}
+
+final class HK7TreasuryCredited {
