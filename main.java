@@ -243,3 +243,52 @@ final class HK7AuditEntry {
 }
 
 final class HK7AuditLog {
+    private static final int MAX_ENTRIES = 10_000;
+    private final List<HK7AuditEntry> entries = Collections.synchronizedList(new ArrayList<>());
+
+    void append(String action, String actor, String detail) {
+        synchronized (entries) {
+            entries.add(new HK7AuditEntry(System.currentTimeMillis() / 1000L, action, actor, detail));
+            while (entries.size() > MAX_ENTRIES) entries.remove(0);
+        }
+    }
+
+    List<HK7AuditEntry> getRecent(int n) {
+        synchronized (entries) {
+            int size = entries.size();
+            if (n <= 0 || size == 0) return List.of();
+            int from = Math.max(0, size - n);
+            return new ArrayList<>(entries.subList(from, size));
+        }
+    }
+
+    int size() { return entries.size(); }
+}
+
+// -----------------------------------------------------------------------------
+// VAULT CONFIG (immutable after construction)
+// -----------------------------------------------------------------------------
+
+final class HK7VaultConfig {
+    private final String chainIdHex;
+    private final BigInteger minDepositWei;
+    private final BigInteger maxDepositPerTxWei;
+    private final int feeBps;
+    private final String feeRecipientHex;
+
+    HK7VaultConfig(String chainIdHex, BigInteger minDepositWei, BigInteger maxDepositPerTxWei, int feeBps, String feeRecipientHex) {
+        this.chainIdHex = chainIdHex != null ? chainIdHex : "0x1";
+        this.minDepositWei = minDepositWei == null || minDepositWei.signum() < 0 ? BigInteger.ZERO : minDepositWei;
+        this.maxDepositPerTxWei = maxDepositPerTxWei == null || maxDepositPerTxWei.signum() < 0 ? BigInteger.ZERO : maxDepositPerTxWei;
+        this.feeBps = Math.max(0, Math.min(feeBps, 10_000));
+        this.feeRecipientHex = feeRecipientHex != null ? feeRecipientHex : "0x0000000000000000000000000000000000000000";
+    }
+
+    public String getChainIdHex() { return chainIdHex; }
+    public BigInteger getMinDepositWei() { return minDepositWei; }
+    public BigInteger getMaxDepositPerTxWei() { return maxDepositPerTxWei; }
+    public int getFeeBps() { return feeBps; }
+    public String getFeeRecipientHex() { return feeRecipientHex; }
+}
+
+// -----------------------------------------------------------------------------
