@@ -684,3 +684,52 @@ final class HK7EncodingUtils {
         if (bytes == null) return "";
         StringBuilder sb = new StringBuilder(bytes.length * 2);
         for (byte b : bytes) {
+            sb.append(HEX.charAt((b >> 4) & 0x0f)).append(HEX.charAt(b & 0x0f));
+        }
+        return "0x" + sb.toString();
+    }
+
+    static byte[] fromHex(String hex) {
+        if (hex == null) return new byte[0];
+        String s = hex.trim().toLowerCase().startsWith("0x") ? hex.trim().substring(2) : hex.trim();
+        if (s.length() % 2 != 0) s = "0" + s;
+        byte[] out = new byte[s.length() / 2];
+        for (int i = 0; i < out.length; i++) {
+            out[i] = (byte) Integer.parseInt(s.substring(i * 2, i * 2 + 2), 16);
+        }
+        return out;
+    }
+
+    static String padAddressTo40(String address) {
+        if (address == null) return HKVault7000.HK7_ZERO_ADDRESS;
+        String s = address.trim().toLowerCase();
+        if (s.startsWith("0x")) s = s.substring(2);
+        if (s.length() >= 40) return "0x" + s.substring(s.length() - 40);
+        return "0x" + "0".repeat(40 - s.length()) + s;
+    }
+
+    static boolean isZeroAddress(String address) {
+        if (address == null) return true;
+        String n = HK7AddressValidator.normalize(address);
+        return n == null || n.equalsIgnoreCase(HKVault7000.HK7_ZERO_ADDRESS) || n.replace("0", "").replace("x", "").isEmpty();
+    }
+}
+
+// -----------------------------------------------------------------------------
+// VAULT REPORT (text / csv style output for off-chain tools)
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// GAS ESTIMATOR (off-chain only; approximate)
+// -----------------------------------------------------------------------------
+
+final class HK7GasEstimator {
+    static final long BASE_REGISTER = 60_000L;
+    static final long BASE_DEPOSIT = 50_000L;
+    static final long BASE_SETTLE = 55_000L;
+    static final long BASE_FREEZE = 30_000L;
+    static final long BASE_THAW = 30_000L;
+    static final long PER_STORAGE_SLOT = 20_000L;
+
+    static long estimateRegisterBunker() {
+        return BASE_REGISTER + PER_STORAGE_SLOT * 5;
