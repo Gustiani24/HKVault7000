@@ -488,3 +488,52 @@ final class HK7VaultEngine {
         if (bunkerCap != null && bunkerCap.signum() > 0 && b.add(amountWei).compareTo(bunkerCap) > 0) return false;
         BigInteger g = currentGlobalDeposited == null ? BigInteger.ZERO : currentGlobalDeposited;
         if (globalCap != null && globalCap.signum() > 0 && g.add(amountWei).compareTo(globalCap) > 0) return false;
+        return true;
+    }
+
+    /** Project fee and net for a given amount and bps. */
+    static BigInteger projectFee(BigInteger amountWei, int feeBps) {
+        if (amountWei == null || amountWei.signum() <= 0 || feeBps <= 0) return BigInteger.ZERO;
+        int bps = Math.max(0, Math.min(feeBps, 10_000));
+        return amountWei.multiply(BigInteger.valueOf(bps)).divide(BigInteger.valueOf(10_000));
+    }
+
+    static BigInteger projectNetAfterFee(BigInteger amountWei, int feeBps) {
+        return HK7WeiMath.subSafe(amountWei == null ? BigInteger.ZERO : amountWei, projectFee(amountWei, feeBps));
+    }
+
+    /** Validate bunker id format (non-empty, reasonable length). */
+    static boolean isValidBunkerId(String bunkerId) {
+        return bunkerId != null && !bunkerId.trim().isEmpty() && bunkerId.length() <= 128;
+    }
+
+    /** Validate tag hash format (optional hex). */
+    static boolean isValidTagHash(String tagHash) {
+        if (tagHash == null || tagHash.isEmpty()) return true;
+        return tagHash.length() <= 66 && (tagHash.startsWith("0x") && tagHash.substring(2).matches("[a-fA-F0-9]+") || tagHash.matches("[a-fA-F0-9]+"));
+    }
+
+    /** Compute a deterministic hash-like id from seed (for testing). */
+    static String deriveBunkerId(String seed, int index) {
+        if (seed == null) seed = "";
+        String s = seed + "_" + index;
+        int h = s.hashCode();
+        return "bunker-0x" + Integer.toHexString(h >= 0 ? h : (h & 0x7FFF_FFFF));
+    }
+
+    /** Batch derive bunker ids. */
+    static List<String> deriveBunkerIds(String seed, int count) {
+        List<String> out = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) out.add(deriveBunkerId(seed, i));
+        return out;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// STATE ENCODER (export vault summary for off-chain audit)
+// -----------------------------------------------------------------------------
+
+final class HK7StateEncoder {
+    static String encodeSummary(HKVault7000 vault) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("HK7|").append(HKVault7000.HK7_VERSION).append("|");
