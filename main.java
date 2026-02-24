@@ -586,3 +586,52 @@ final class HK7IntegrityCheck {
         BigInteger active = vault.getVaultTotalBalance();
         BigInteger totalDep = vault.getTotalDepositedWei();
         BigInteger totalSet = vault.getTotalSettledWei();
+        return active.add(totalSet).compareTo(totalDep) <= 0 && totalDep.compareTo(BigInteger.ZERO) >= 0;
+    }
+
+    /** Every bunker in list must exist and have consistent settled flag. */
+    static boolean checkBunkerConsistency(HKVault7000 vault) {
+        for (String id : vault.getAllBunkerIds()) {
+            if (!vault.bunkerExists(id)) return false;
+            HK7BunkerInfo info = vault.getBunkerInfo(id);
+            if (vault.isBunkerSettled(id) != info.isSettled()) return false;
+        }
+        return true;
+    }
+
+    /** Custodian and treasury must be valid EVM addresses. */
+    static boolean checkAddresses(HKVault7000 vault) {
+        return HK7AddressValidator.isValid(vault.getCustodian()) && HK7AddressValidator.isValid(vault.getTreasury());
+    }
+
+    /** Run all checks; returns first failure message or null if ok. */
+    static String runAllChecks(HKVault7000 vault) {
+        if (!checkAddresses(vault)) return "HK7_CHECK: invalid custodian or treasury";
+        if (!checkBalanceInvariant(vault)) return "HK7_CHECK: balance invariant violated";
+        if (!checkBunkerConsistency(vault)) return "HK7_CHECK: bunker consistency failed";
+        return null;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// RUNBOOK (step-by-step procedures for ops; no state mutation)
+// -----------------------------------------------------------------------------
+
+final class HK7Runbook {
+    static final int STEP_REGISTER = 1;
+    static final int STEP_DEPOSIT = 2;
+    static final int STEP_SETTLE = 3;
+    static final int STEP_FREEZE = 4;
+    static final int STEP_THAW = 5;
+    static final int STEP_AUDIT = 6;
+
+    static String describeStep(int step) {
+        switch (step) {
+            case STEP_REGISTER: return "Register bunker (custodian only)";
+            case STEP_DEPOSIT: return "Deposit wei into bunker (anyone, when not frozen)";
+            case STEP_SETTLE: return "Settle bunker and credit treasury (custodian only)";
+            case STEP_FREEZE: return "Freeze vault (custodian only)";
+            case STEP_THAW: return "Thaw vault (custodian only)";
+            case STEP_AUDIT: return "Export audit / summary";
+            default: return "Unknown step";
+        }
