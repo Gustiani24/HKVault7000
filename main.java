@@ -733,3 +733,52 @@ final class HK7GasEstimator {
 
     static long estimateRegisterBunker() {
         return BASE_REGISTER + PER_STORAGE_SLOT * 5;
+    }
+
+    static long estimateDeposit() {
+        return BASE_DEPOSIT + PER_STORAGE_SLOT * 2;
+    }
+
+    static long estimateSettleBunker() {
+        return BASE_SETTLE + PER_STORAGE_SLOT * 3;
+    }
+
+    static long estimateFreeze() { return BASE_FREEZE; }
+    static long estimateThaw() { return BASE_THAW; }
+
+    static Map<String, Long> estimateAll() {
+        Map<String, Long> m = new HashMap<>();
+        m.put("registerBunker", estimateRegisterBunker());
+        m.put("deposit", estimateDeposit());
+        m.put("settleBunker", estimateSettleBunker());
+        m.put("freezeVault", estimateFreeze());
+        m.put("thawVault", estimateThaw());
+        return m;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// VAULT REPORT (text / csv style output for off-chain tools)
+// -----------------------------------------------------------------------------
+
+final class HK7VaultReport {
+    static String toCsvLine(String... cells) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < cells.length; i++) {
+            if (i > 0) sb.append(",");
+            String c = cells[i] != null ? cells[i] : "";
+            if (c.contains(",") || c.contains("\"") || c.contains("\n")) {
+                sb.append("\"").append(c.replace("\"", "\"\"")).append("\"");
+            } else sb.append(c);
+        }
+        return sb.toString();
+    }
+
+    static List<String> buildBunkerCsv(HKVault7000 vault) {
+        List<String> lines = new ArrayList<>();
+        lines.add(toCsvLine("bunkerId", "tagHash", "balance", "createdAtBlock", "settled", "depositorCount"));
+        for (String id : vault.getAllBunkerIds()) {
+            HK7BunkerInfo info = vault.getBunkerInfo(id);
+            int depCount = vault.getDepositorCount(id);
+            lines.add(toCsvLine(id, info.getTagHash(), info.getBalance().toString(), String.valueOf(info.getCreatedAtBlock()),
+                String.valueOf(info.isSettled()), String.valueOf(depCount)));
