@@ -47,3 +47,52 @@ final class HK7ErrorCodes {
     static final String HK7_ZERO_AMT = "HK7_ZERO_AMT";
     static final String HK7_BUNKER_CAP = "HK7_BUNKER_CAP";
     static final String HK7_BAD_INDEX = "HK7_BAD_INDEX";
+    static final String HK7_INTEGRITY = "HK7_INTEGRITY";
+
+    static String describe(String code) {
+        if (code == null) return "Unknown";
+        switch (code) {
+            case HK7_ZERO_BUNKER: return "Bunker id is zero or empty";
+            case HK7_ZERO_ADDR: return "Custodian or treasury address invalid";
+            case HK7_NOT_CUSTODIAN: return "Caller is not custodian";
+            case HK7_BUNKER_MISSING: return "Bunker not found";
+            case HK7_BUNKER_EXISTS: return "Bunker already exists";
+            case HK7_BUNKER_CLOSED: return "Bunker already settled";
+            case HK7_VAULT_FROZEN: return "Vault is frozen";
+            case HK7_XFER_FAIL: return "Transfer failed";
+            case HK7_ZERO_AMT: return "Deposit amount must be positive or below min / above max";
+            case HK7_BUNKER_CAP: return "Bunker or global deposit cap exceeded";
+            case HK7_BAD_INDEX: return "Index out of range";
+            case HK7_INTEGRITY: return "Integrity check failed";
+            default: return "Unknown error: " + code;
+        }
+    }
+
+    static List<String> allCodes() {
+        return List.of(HK7_ZERO_BUNKER, HK7_ZERO_ADDR, HK7_NOT_CUSTODIAN, HK7_BUNKER_MISSING, HK7_BUNKER_EXISTS,
+            HK7_BUNKER_CLOSED, HK7_VAULT_FROZEN, HK7_XFER_FAIL, HK7_ZERO_AMT, HK7_BUNKER_CAP, HK7_BAD_INDEX, HK7_INTEGRITY);
+    }
+}
+
+// -----------------------------------------------------------------------------
+// WEI SAFE MATH (overflow-safe for EVM-style amounts)
+// -----------------------------------------------------------------------------
+
+final class HK7WeiMath {
+    private static final BigInteger MAX_U256 = BigInteger.ONE.shiftLeft(256).subtract(BigInteger.ONE);
+
+    static BigInteger clampU256(BigInteger value) {
+        if (value == null || value.signum() < 0) return BigInteger.ZERO;
+        if (value.compareTo(MAX_U256) > 0) return MAX_U256;
+        return value;
+    }
+
+    static BigInteger addSafe(BigInteger a, BigInteger b) {
+        BigInteger sum = (a == null ? BigInteger.ZERO : a).add(b == null ? BigInteger.ZERO : b);
+        return clampU256(sum);
+    }
+
+    static BigInteger subSafe(BigInteger a, BigInteger b) {
+        BigInteger aa = a == null ? BigInteger.ZERO : a;
+        BigInteger bb = b == null ? BigInteger.ZERO : b;
+        if (bb.compareTo(aa) > 0) return BigInteger.ZERO;
