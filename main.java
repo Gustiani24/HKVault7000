@@ -2056,3 +2056,46 @@ public final class HKVault7000 {
 
     /** Check if address is treasury. */
     public boolean isTreasury(String address) {
+        return addressesEqual(treasury, address);
+    }
+
+    /** Get all bunker ids that have positive balance and are not settled. */
+    public List<String> getBunkerIdsWithBalance() {
+        List<String> out = new ArrayList<>();
+        for (String id : bunkerIdList) {
+            if (Boolean.TRUE.equals(bunkerSettled.get(id))) continue;
+            if (bunkerBalance.getOrDefault(id, BigInteger.ZERO).compareTo(BigInteger.ZERO) > 0) {
+                out.add(id);
+            }
+        }
+        return out;
+    }
+
+    /** Total distinct (bunker, depositor) pairs that have recorded deposits. */
+    public int getDistinctDepositorBunkerPairs() {
+        int n = 0;
+        for (String id : bunkerIds) {
+            n += depositLedger.getDepositorCount(id);
+        }
+        return n;
+    }
+
+    /** One ETH in wei (18 decimals). */
+    public static BigInteger oneEth() { return HK7_ONE_ETH_WEI; }
+
+    /** Default decimals for wei display. */
+    public static final int HK7_WEI_DECIMALS = 18;
+
+    /** Whether this vault has any bunkers. */
+    public boolean hasBunkers() { return bunkerCount.get() > 0; }
+
+    /** Whether this vault has any unsettled bunkers. */
+    public boolean hasActiveBunkers() { return getActiveBunkerCount() > 0; }
+
+    /** Human-readable wei (18 decimals). */
+    public static String weiToEthString(BigInteger wei) { return weiToDecimalString(wei, HK7_WEI_DECIMALS); }
+
+    /** Returns config fee in basis points. */
+    public int getConfigFeeBps() { return vaultConfig.getFeeBps(); }
+}
+
