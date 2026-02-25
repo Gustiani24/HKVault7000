@@ -1223,3 +1223,52 @@ public final class HKVault7000 {
     public List<HK7AuditEntry> getAuditRecent(int n) {
         return auditLog.getRecent(n);
     }
+
+    /** Set a per-bunker deposit cap (custodian-only in production). */
+    public void setBunkerDepositCap(String bunkerId, BigInteger cap) {
+        quotaManager.setBunkerCap(bunkerId, cap);
+    }
+
+    /** Get the deposit cap for a bunker. */
+    public BigInteger getBunkerDepositCap(String bunkerId) {
+        return quotaManager.getBunkerCap(bunkerId);
+    }
+
+    /** Get global deposit cap. */
+    public BigInteger getGlobalDepositCap() {
+        return quotaManager.getGlobalDepositCap();
+    }
+
+    /** Fee in basis points. */
+    public int getFeeBps() {
+        return feeCalculator.getFeeBps();
+    }
+
+    /** Compute fee for a given amount (view). */
+    public BigInteger computeFeeFor(BigInteger amountWei) {
+        return feeCalculator.computeFee(amountWei);
+    }
+
+    /** Amount after fee for a given amount (view). */
+    public BigInteger amountAfterFee(BigInteger amountWei) {
+        return feeCalculator.amountAfterFee(amountWei);
+    }
+
+    /** Per-bunker stats. */
+    public HK7BunkerStats getBunkerStats(String bunkerId) {
+        if (!bunkerIds.contains(bunkerId)) throw new HK7Exception("HK7_BUNKER_MISSING", "Bunker not found");
+        return new HK7BunkerStats(
+            bunkerId,
+            bunkerBalance.getOrDefault(bunkerId, BigInteger.ZERO),
+            depositLedger.getDepositorCount(bunkerId),
+            Boolean.TRUE.equals(bunkerSettled.get(bunkerId)),
+            bunkerCreatedAtBlock.getOrDefault(bunkerId, 0L)
+        );
+    }
+
+    /** Global vault stats. */
+    public HK7VaultStats getVaultStats() {
+        return new HK7VaultStats(
+            bunkerCount.get(),
+            getActiveBunkerCount(),
+            getTotalDepositedWei(),
