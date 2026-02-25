@@ -782,3 +782,52 @@ final class HK7VaultReport {
             int depCount = vault.getDepositorCount(id);
             lines.add(toCsvLine(id, info.getTagHash(), info.getBalance().toString(), String.valueOf(info.getCreatedAtBlock()),
                 String.valueOf(info.isSettled()), String.valueOf(depCount)));
+        }
+        return lines;
+    }
+
+    static List<String> buildDepositsCsv(HKVault7000 vault, String bunkerId) {
+        List<String> lines = new ArrayList<>();
+        lines.add(toCsvLine("depositor", "amountWei"));
+        Map<String, BigInteger> m = vault.getDepositLedger().getBunkerDepositsSnapshot(bunkerId);
+        for (Map.Entry<String, BigInteger> e : m.entrySet()) {
+            lines.add(toCsvLine(e.getKey(), e.getValue().toString()));
+        }
+        return lines;
+    }
+
+    static String buildSummaryText(HKVault7000 vault) {
+        HK7VaultStats s = vault.getVaultStats();
+        return String.format("HKVault7000 %s | bunkers=%d active=%d totalDeposited=%s totalSettled=%s vaultBalance=%s frozen=%s",
+            HKVault7000.HK7_VERSION, s.getBunkerCount(), s.getActiveBunkerCount(), s.getTotalDepositedWei(), s.getTotalSettledWei(),
+            s.getVaultTotalBalance(), s.isFrozen());
+    }
+}
+
+// -----------------------------------------------------------------------------
+// MAIN VAULT
+// -----------------------------------------------------------------------------
+
+/**
+ * HKVault7000 — Bunker-style DeFi custody vault for EVM-aligned deployments.
+ * <p>
+ * Custodian registers bunkers; any address may deposit wei into an active bunker;
+ * custodian settles bunkers, sending balance to the immutable treasury (with optional fee deduction).
+ * All role addresses and limits are set at construction. Safe for mainnet use when deployed
+ * with correct custodian and treasury and standard access controls enforced on-chain.
+ * <p>
+ * Events: BunkerRegistered, Deposited, BunkerSettled, TreasuryCredited, VaultFrozen, VaultThawed.
+ * Errors: HK7_ZERO_BUNKER, HK7_ZERO_ADDR, HK7_NOT_CUSTODIAN, HK7_BUNKER_MISSING, HK7_BUNKER_EXISTS,
+ * HK7_BUNKER_CLOSED, HK7_VAULT_FROZEN, HK7_XFER_FAIL, HK7_ZERO_AMT, HK7_BUNKER_CAP, HK7_BAD_INDEX.
+ */
+public final class HKVault7000 {
+
+    // -------------------------------------------------------------------------
+    // CONSTANTS (unique)
+    // -------------------------------------------------------------------------
+
+    /** Maximum number of bunkers that may be registered. */
+    public static final int HK7_MAX_BUNKERS = 64;
+    /** Maximum number of bunker ids returned in a single batch view call. */
+    public static final int HK7_VIEW_BATCH_CAP = 24;
+    /** Namespace / domain anchor for this vault (unique hex). */
