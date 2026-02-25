@@ -1762,3 +1762,52 @@ public final class HKVault7000 {
      * Scenario G: Batch register and batch settle.
      */
     public static HKVault7000 scenarioBatchRegisterSettle() {
+        HKVault7000 v = new HKVault7000();
+        List<String> ids = HK7VaultEngine.deriveBunkerIds("batch", 5);
+        List<String> tags = List.of("0x01", "0x02", "0x03", "0x04", "0x05");
+        v.runAsCustodian(() -> v.registerBunkersBatch(ids, tags));
+        for (String id : ids) {
+            v.depositFrom("0x4b7e9f2a5c8d1e4f7a0b3c6d9e2f5a8b1c4d7e0", id, HK7_ONE_ETH_WEI);
+        }
+        v.runAsCustodian(() -> v.settleBunkersBatch(ids));
+        return v;
+    }
+
+    /**
+     * Scenario H: Get vault stats at various stages.
+     */
+    public static HK7VaultStats scenarioStatsStages() {
+        HKVault7000 v = new HKVault7000();
+        v.runAsCustodian(() -> v.registerBunker("stats-1", "0x00"));
+        HK7VaultStats s1 = v.getVaultStats();
+        v.depositFrom("0x4b7e9f2a5c8d1e4f7a0b3c6d9e2f5a8b1c4d7e0", "stats-1", HK7_ONE_ETH_WEI);
+        HK7VaultStats s2 = v.getVaultStats();
+        v.runAsCustodian(() -> v.settleBunker("stats-1"));
+        HK7VaultStats s3 = v.getVaultStats();
+        return s3;
+    }
+
+    /**
+     * Scenario I: Depositor count and getDepositBy per bunker.
+     */
+    public static Map<String, BigInteger> scenarioDepositorLedger() {
+        HKVault7000 v = new HKVault7000();
+        v.runAsCustodian(() -> v.registerBunker("ledger-1", "0x00"));
+        v.depositFrom("0x4b7e9f2a5c8d1e4f7a0b3c6d9e2f5a8b1c4d7e0", "ledger-1", HK7_ONE_ETH_WEI);
+        v.depositFrom("0x5c8f0a3b6d9e2f5a8b1c4d7e0f3a6b9c2d5e8f1", "ledger-1", HK7_ONE_ETH_WEI.multiply(BigInteger.TWO));
+        return v.getDepositLedger().getBunkerDepositsSnapshot("ledger-1");
+    }
+
+    /**
+     * Scenario J: Audit log entries after several actions.
+     */
+    public static List<HK7AuditEntry> scenarioAuditTrail() {
+        HKVault7000 v = scenarioSingleBunkerSingleDeposit();
+        return v.getAuditRecent(20);
+    }
+
+    /**
+     * Full integration flow: register N bunkers, deposit from M depositors into each, settle all, run integrity, export reports.
+     * Returns the vault for further inspection.
+     */
+    public static HKVault7000 runFullIntegrationFlow(int numBunkers, int depositorsPerBunker, List<String> depositorAddrs) {
