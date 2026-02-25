@@ -1272,3 +1272,52 @@ public final class HKVault7000 {
             bunkerCount.get(),
             getActiveBunkerCount(),
             getTotalDepositedWei(),
+            getTotalSettledWei(),
+            getVaultTotalBalance(),
+            frozen.get(),
+            deployBlock
+        );
+    }
+
+    /** Export state summary string. */
+    public String exportSummary() {
+        return HK7StateEncoder.encodeSummary(this);
+    }
+
+    /** Export bunker lines for audit. */
+    public List<String> exportBunkerLines() {
+        return HK7StateEncoder.encodeBunkerLines(this);
+    }
+
+    /** Build bunker CSV report (bunkerId, tagHash, balance, createdAtBlock, settled, depositorCount). */
+    public List<String> buildBunkerCsvReport() {
+        return HK7VaultReport.buildBunkerCsv(this);
+    }
+
+    /** Build deposits CSV for one bunker (depositor, amountWei). */
+    public List<String> buildDepositsCsvReport(String bunkerId) {
+        return HK7VaultReport.buildDepositsCsv(this, bunkerId);
+    }
+
+    /** Build one-line summary text. */
+    public String buildSummaryReport() {
+        return HK7VaultReport.buildSummaryText(this);
+    }
+
+    /** Pad an address to 40-char hex format. */
+    public static String padAddress(String address) {
+        return HK7EncodingUtils.padAddressTo40(address);
+    }
+
+    /** Check if address is zero. */
+    public static boolean isZeroAddress(String address) {
+        return HK7EncodingUtils.isZeroAddress(address);
+    }
+
+    /** Get gas estimates for all main operations (off-chain only). */
+    public static Map<String, Long> getGasEstimates() {
+        return HK7GasEstimator.estimateAll();
+    }
+
+    /** Estimate gas for registerBunker (off-chain only). */
+    public static long estimateGasRegisterBunker() {
