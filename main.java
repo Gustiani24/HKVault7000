@@ -1811,3 +1811,52 @@ public final class HKVault7000 {
      * Returns the vault for further inspection.
      */
     public static HKVault7000 runFullIntegrationFlow(int numBunkers, int depositorsPerBunker, List<String> depositorAddrs) {
+        HKVault7000 v = new HKVault7000();
+        List<String> addrs = depositorAddrs != null && !depositorAddrs.isEmpty() ? depositorAddrs : List.of(
+            "0x4b7e9f2a5c8d1e4f7a0b3c6d9e2f5a8b1c4d7e0",
+            "0x5c8f0a3b6d9e2f5a8b1c4d7e0f3a6b9c2d5e8f1",
+            "0x6d0e1f3a5c8b2d4e6f8a0b2c4d6e8f0a2b4c6d8e0"
+        );
+        v.runAsCustodian(() -> {
+            for (int i = 0; i < numBunkers && i < HK7_MAX_BUNKERS; i++) {
+                String bid = HK7VaultEngine.deriveBunkerId("int", i);
+                v.registerBunker(bid, "0x" + Integer.toHexString(i));
+            }
+        });
+        BigInteger oneEth = HK7_ONE_ETH_WEI;
+        for (String bid : v.getActiveBunkerIds()) {
+            for (int d = 0; d < depositorsPerBunker; d++) {
+                String depositor = addrs.get(d % addrs.size());
+                v.depositFrom(depositor, bid, oneEth.multiply(BigInteger.valueOf(d + 1)));
+            }
+        }
+        v.runAsCustodian(() -> v.settleBunkersBatch(v.getActiveBunkerIds()));
+        String check = v.runIntegrityCheck();
+        if (check != null) {
+            throw new HK7Exception("HK7_INTEGRITY", "Integration flow failed: " + check);
+        }
+        v.exportSummary();
+        v.exportBunkerLines();
+        v.buildBunkerCsvReport();
+        v.buildSummaryReport();
+        return v;
+    }
+
+    // -------------------------------------------------------------------------
+    // ADDITIONAL CONSTANTS (EVM mainnet alignment)
+    // -------------------------------------------------------------------------
+
+    /** Gas estimate placeholder for registerBunker (off-chain only). */
+    public static final long HK7_EST_GAS_REGISTER = 80_000L;
+    /** Gas estimate placeholder for deposit (off-chain only). */
+    public static final long HK7_EST_GAS_DEPOSIT = 65_000L;
+    /** Gas estimate placeholder for settleBunker (off-chain only). */
+    public static final long HK7_EST_GAS_SETTLE = 75_000L;
+    /** Max length for bunker id string. */
+    public static final int HK7_MAX_BUNKER_ID_LEN = 128;
+    /** Max length for tag hash string. */
+    public static final int HK7_MAX_TAG_LEN = 66;
+    /** Basis points denominator. */
+    public static final int HK7_BPS_DENOMINATOR = 10_000;
+    /** Default minimum deposit in wei (1e15 = 0.001 ETH). */
+    public static final BigInteger HK7_DEFAULT_MIN_DEPOSIT_WEI = BigInteger.valueOf(1_000_000_000_000_000L);
