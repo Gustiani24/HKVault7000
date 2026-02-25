@@ -1321,3 +1321,52 @@ public final class HKVault7000 {
 
     /** Estimate gas for registerBunker (off-chain only). */
     public static long estimateGasRegisterBunker() {
+        return HK7GasEstimator.estimateRegisterBunker();
+    }
+
+    /** Estimate gas for deposit (off-chain only). */
+    public static long estimateGasDeposit() {
+        return HK7GasEstimator.estimateDeposit();
+    }
+
+    /** Estimate gas for settleBunker (off-chain only). */
+    public static long estimateGasSettleBunker() {
+        return HK7GasEstimator.estimateSettleBunker();
+    }
+
+    /** Check if deposit would succeed (view only). */
+    public boolean wouldDepositSucceed(String bunkerId, BigInteger amountWei) {
+        if (!bunkerExists(bunkerId) || isBunkerSettled(bunkerId)) return false;
+        return HK7VaultEngine.wouldDepositSucceed(
+            getBunkerBalance(bunkerId), getTotalDepositedWei(),
+            getBunkerDepositCap(bunkerId), getGlobalDepositCap(),
+            amountWei, vaultConfig.getMinDepositWei(), vaultConfig.getMaxDepositPerTxWei()
+        );
+    }
+
+    /** Project fee for amount at current config. */
+    public BigInteger projectFee(BigInteger amountWei) {
+        return HK7VaultEngine.projectFee(amountWei, vaultConfig.getFeeBps());
+    }
+
+    /** Project net after fee. */
+    public BigInteger projectNetAfterFee(BigInteger amountWei) {
+        return HK7VaultEngine.projectNetAfterFee(amountWei, vaultConfig.getFeeBps());
+    }
+
+    /** Run integrity checks; returns null if all pass, else first failure message. */
+    public String runIntegrityCheck() {
+        return HK7IntegrityCheck.runAllChecks(this);
+    }
+
+    /** Get runbook summary string. */
+    public static String getRunbookSummary() {
+        return HK7Runbook.runbookSummary();
+    }
+
+    /** Get preconditions for registering a bunker. */
+    public List<String> getRegisterPreconditions() {
+        return HK7Runbook.preconditionsForRegister(this);
+    }
+
+    /** Get preconditions for depositing into a bunker. */
