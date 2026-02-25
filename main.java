@@ -831,3 +831,52 @@ public final class HKVault7000 {
     /** Maximum number of bunker ids returned in a single batch view call. */
     public static final int HK7_VIEW_BATCH_CAP = 24;
     /** Namespace / domain anchor for this vault (unique hex). */
+    public static final String HK7_NAMESPACE_HEX = "0x9e1f4a7c0d3e6b9f2a5c8d1e4f7a0b3c6d9e2f5a8";
+    /** Contract version string. */
+    public static final String HK7_VERSION = "7000.1.0";
+
+    // -------------------------------------------------------------------------
+    // IMMUTABLE ADDRESSES (set at construction, never changed)
+    // -------------------------------------------------------------------------
+
+    private final String custodian;
+    private final String treasury;
+    private final long deployBlock;
+
+    // -------------------------------------------------------------------------
+    // STATE
+    // -------------------------------------------------------------------------
+
+    private final Set<String> bunkerIds = ConcurrentHashMap.newKeySet();
+    private final Map<String, Boolean> bunkerSettled = new ConcurrentHashMap<>();
+    private final Map<String, BigInteger> bunkerBalance = new ConcurrentHashMap<>();
+    private final Map<String, String> bunkerTag = new ConcurrentHashMap<>();
+    private final Map<String, Long> bunkerCreatedAtBlock = new ConcurrentHashMap<>();
+    private final List<String> bunkerIdList = Collections.synchronizedList(new ArrayList<>());
+    private final AtomicLong bunkerCount = new AtomicLong(0);
+    private final AtomicLong totalDeposited = new AtomicLong(0);
+    private final AtomicLong totalSettled = new AtomicLong(0);
+    private final AtomicBoolean frozen = new AtomicBoolean(false);
+    private final List<HK7EventListener> listeners = Collections.synchronizedList(new ArrayList<>());
+    private final Object reentrancyLock = new Object();
+    private final HK7FeeCalculator feeCalculator;
+    private final HK7QuotaManager quotaManager;
+    private final HK7DepositLedger depositLedger;
+    private final HK7AuditLog auditLog;
+    private final HK7VaultConfig vaultConfig;
+
+    // -------------------------------------------------------------------------
+    // CONSTRUCTOR (all addresses populated, no fill-in)
+    // -------------------------------------------------------------------------
+
+    public HKVault7000() {
+        this.custodian = "0x4b7e9f2a5c8d1e4f7a0b3c6d9e2f5a8b1c4d7e0";
+        this.treasury = "0x5c8f0a3b6d9e2f5a8b1c4d7e0f3a6b9c2d5e8f1";
+        this.deployBlock = System.currentTimeMillis() / 1000L;
+        if (!HK7AddressValidator.isValid(custodian) || !HK7AddressValidator.isValid(treasury)) {
+            throw new HK7Exception("HK7_ZERO_ADDR", "Custodian or treasury address invalid");
+        }
+        this.feeCalculator = new HK7FeeCalculator(30);
+        this.quotaManager = new HK7QuotaManager(
+            BigInteger.valueOf(1000).multiply(BigInteger.TEN.pow(18)),
+            BigInteger.valueOf(100).multiply(BigInteger.TEN.pow(18))
