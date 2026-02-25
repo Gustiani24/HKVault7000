@@ -929,3 +929,52 @@ public final class HKVault7000 {
             throw new HK7Exception("HK7_BUNKER_MISSING", "Bunker not found");
         }
     }
+
+    private void requireBunkerNotSettled(String bunkerId) {
+        if (Boolean.TRUE.equals(bunkerSettled.get(bunkerId))) {
+            throw new HK7Exception("HK7_BUNKER_CLOSED", "Bunker already settled");
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // CUSTODIAN: REGISTER BUNKER
+    // -------------------------------------------------------------------------
+
+    /**
+     * Register a new bunker. Only custodian. Fails if vault frozen or bunker cap reached.
+     */
+    public void registerBunker(String bunkerId, String tagHash) {
+        requireCustodian(Thread.currentThread().getName()); // in real EVM this would be msg.sender
+        requireNotFrozen();
+        requireValidBunkerId(bunkerId);
+        if (bunkerIds.contains(bunkerId)) {
+            throw new HK7Exception("HK7_BUNKER_EXISTS", "Bunker already exists");
+        }
+        if (bunkerCount.get() >= HK7_MAX_BUNKERS) {
+            throw new HK7Exception("HK7_BUNKER_CAP", "Bunker limit reached");
+        }
+        bunkerIds.add(bunkerId);
+        bunkerSettled.put(bunkerId, Boolean.FALSE);
+        bunkerBalance.put(bunkerId, BigInteger.ZERO);
+        bunkerTag.put(bunkerId, tagHash != null ? tagHash : "");
+        long block = currentBlock();
+        bunkerCreatedAtBlock.put(bunkerId, block);
+        bunkerIdList.add(bunkerId);
+        bunkerCount.incrementAndGet();
+        HK7BunkerRegistered ev = new HK7BunkerRegistered(bunkerId, tagHash != null ? tagHash : "", block);
+        dispatch(ev);
+    }
+
+    /**
+     * Register bunker with caller passed explicitly (for simulation/testing).
+     */
+    public void registerBunkerFrom(String sender, String bunkerId, String tagHash) {
+        String prev = Thread.currentThread().getName();
+        try {
+            Thread.currentThread().setName(sender != null ? sender : custodian);
+            registerBunker(bunkerId, tagHash);
+        } finally {
+            Thread.currentThread().setName(prev);
+        }
+    }
+
