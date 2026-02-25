@@ -1566,3 +1566,52 @@ public final class HKVault7000 {
         System.out.println("Version: " + HK7_VERSION + " | Namespace: " + HK7_NAMESPACE_HEX);
         System.out.println("Runbook: " + getRunbookSummary());
         System.out.println("Error codes: " + HK7ErrorCodes.allCodes());
+        for (String code : HK7ErrorCodes.allCodes()) {
+            System.out.println("  " + code + ": " + HK7ErrorCodes.describe(code));
+        }
+        System.out.println("Gas estimates: " + getGasEstimates());
+        HKVault7000 v = new HKVault7000();
+        System.out.println("Custodian: " + v.getCustodian() + " | Treasury: " + v.getTreasury());
+        v.runAsCustodian(() -> {
+            v.registerBunker("demo-1", "0xd1");
+            v.registerBunker("demo-2", "0xd2");
+        });
+        v.depositFrom("0x4b7e9f2a5c8d1e4f7a0b3c6d9e2f5a8b1c4d7e0", "demo-1", HK7_ONE_ETH_WEI);
+        v.depositFrom("0x5c8f0a3b6d9e2f5a8b1c4d7e0f3a6b9c2d5e8f1", "demo-1", HK7_ONE_ETH_WEI);
+        v.depositFrom("0x4b7e9f2a5c8d1e4f7a0b3c6d9e2f5a8b1c4d7e0", "demo-2", HK7_ONE_ETH_WEI.multiply(BigInteger.TWO));
+        System.out.println("Summary: " + v.buildSummaryReport());
+        System.out.println("Bunker CSV: " + v.buildBunkerCsvReport());
+        v.runAsCustodian(() -> v.settleBunkersBatch(v.getActiveBunkerIds()));
+        String integrity = v.runIntegrityCheck();
+        System.out.println("Integrity: " + (integrity == null ? "PASS" : integrity));
+        System.out.println("Scenario single: " + scenarioSingleBunkerSingleDeposit().getVaultStats().getTotalSettledWei());
+        System.out.println("=== Demo complete ===");
+    }
+
+    /** Resolve error code to human-readable description. */
+    public static String describeErrorCode(String code) {
+        return HK7ErrorCodes.describe(code);
+    }
+
+    /** List all defined error codes. */
+    public static List<String> getAllErrorCodes() {
+        return HK7ErrorCodes.allCodes();
+    }
+
+    // -------------------------------------------------------------------------
+    // SIMULATION RUNNER (off-chain stress / demo)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Run a full simulation: register bunkers, deposit, settle, freeze/thaw, and print stats.
+     * Uses unique addresses and hex from this contract only.
+     */
+    public static void runSimulation(int numBunkers, int depositsPerBunker) {
+        HKVault7000 v = new HKVault7000();
+        List<String> depositorAddresses = List.of(
+            "0x4b7e9f2a5c8d1e4f7a0b3c6d9e2f5a8b1c4d7e0",
+            "0x5c8f0a3b6d9e2f5a8b1c4d7e0f3a6b9c2d5e8f1",
+            "0x6d0e1f3a5c8b2d4e6f8a0b2c4d6e8f0a2b4c6d8e0",
+            "0x7e1f2a4b6c8d0e2f4a6b8c0d2e4f6a8b0c2d4e6f8",
+            "0x8f2a3b5c7d9e1f3a5b7d9e1f3a5b7d9e1f3a5b7c9"
+        );
