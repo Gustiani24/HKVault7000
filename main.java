@@ -1713,3 +1713,52 @@ public final class HKVault7000 {
         return v;
     }
 
+    /**
+     * Scenario C: Freeze then thaw without settling.
+     */
+    public static HKVault7000 scenarioFreezeThaw() {
+        HKVault7000 v = new HKVault7000();
+        v.runAsCustodian(() -> {
+            v.registerBunker("scenario-c-1", "0xcc01");
+            v.freezeVault(v.getCustodian());
+        });
+        v.runAsCustodian(() -> v.thawVault(v.getCustodian()));
+        v.depositFrom("0x4b7e9f2a5c8d1e4f7a0b3c6d9e2f5a8b1c4d7e0", "scenario-c-1", HK7_ONE_ETH_WEI);
+        return v;
+    }
+
+    /**
+     * Scenario D: Export summary and bunker lines after deposits.
+     */
+    public static List<String> scenarioExportAfterDeposits() {
+        HKVault7000 v = scenarioMultiBunkerMultiDeposit(2, 2);
+        List<String> out = new ArrayList<>();
+        out.add(v.exportSummary());
+        out.addAll(v.exportBunkerLines());
+        return out;
+    }
+
+    /**
+     * Scenario E: Run integrity check after full cycle.
+     */
+    public static String scenarioIntegrityAfterCycle() {
+        HKVault7000 v = scenarioSingleBunkerSingleDeposit();
+        return v.runIntegrityCheck();
+    }
+
+    /**
+     * Scenario F: Would-deposit check for valid and invalid cases.
+     */
+    public static boolean[] scenarioWouldDepositChecks() {
+        HKVault7000 v = new HKVault7000();
+        v.runAsCustodian(() -> v.registerBunker("scenario-f-1", "0xff01"));
+        boolean valid = v.wouldDepositSucceed("scenario-f-1", HK7_ONE_ETH_WEI);
+        boolean invalidBunker = v.wouldDepositSucceed("nonexistent", HK7_ONE_ETH_WEI);
+        boolean invalidZero = v.wouldDepositSucceed("scenario-f-1", BigInteger.ZERO);
+        return new boolean[] { valid, !invalidBunker, !invalidZero };
+    }
+
+    /**
+     * Scenario G: Batch register and batch settle.
+     */
+    public static HKVault7000 scenarioBatchRegisterSettle() {
