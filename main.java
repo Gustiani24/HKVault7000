@@ -1125,3 +1125,52 @@ public final class HKVault7000 {
         }
         return bunkerIdList.get(index);
     }
+
+    /**
+     * Batch return bunker ids for view (capped by HK7_VIEW_BATCH_CAP).
+     */
+    public List<String> getBunkerIdsBatch(int offset, int limit) {
+        int size = bunkerIdList.size();
+        if (offset >= size) return List.of();
+        int cap = Math.min(limit, HK7_VIEW_BATCH_CAP);
+        int end = Math.min(offset + cap, size);
+        List<String> out = new ArrayList<>(end - offset);
+        synchronized (bunkerIdList) {
+            for (int i = offset; i < end; i++) {
+                out.add(bunkerIdList.get(i));
+            }
+        }
+        return out;
+    }
+
+    public long getDeployBlock() { return deployBlock; }
+
+    public HK7VaultConfig getVaultConfig() { return vaultConfig; }
+    public HK7DepositLedger getDepositLedger() { return depositLedger; }
+    public HK7AuditLog getAuditLog() { return auditLog; }
+    public HK7FeeCalculator getFeeCalculator() { return feeCalculator; }
+    public HK7QuotaManager getQuotaManager() { return quotaManager; }
+
+    /** Returns deposit amount by depositor for a bunker. */
+    public BigInteger getDepositBy(String bunkerId, String depositor) {
+        return depositLedger.getDepositBy(bunkerId, depositor);
+    }
+
+    /** Returns number of distinct depositors for a bunker. */
+    public int getDepositorCount(String bunkerId) {
+        return depositLedger.getDepositorCount(bunkerId);
+    }
+
+    /** Returns set of depositor addresses for a bunker. */
+    public Set<String> getDepositors(String bunkerId) {
+        return depositLedger.getDepositors(bunkerId);
+    }
+
+    /** Batch return bunker infos for view; capped by HK7_VIEW_BATCH_CAP. */
+    public List<HK7BunkerInfo> getBunkerInfosBatch(int offset, int limit) {
+        List<String> ids = getBunkerIdsBatch(offset, limit);
+        List<HK7BunkerInfo> out = new ArrayList<>(ids.size());
+        for (String id : ids) {
+            if (bunkerIds.contains(id)) {
+                out.add(new HK7BunkerInfo(
+                    id,
