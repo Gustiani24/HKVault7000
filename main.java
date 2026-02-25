@@ -1517,3 +1517,52 @@ public final class HKVault7000 {
             );
         }
     }
+
+    // -------------------------------------------------------------------------
+    // MAIN (CLI / demo)
+    // -------------------------------------------------------------------------
+
+    public static void main(String[] args) {
+        HKVault7000 vault = new HKVault7000();
+        vault.addEventListener(new HK7EventListener() {
+            @Override public void onBunkerRegistered(HK7BunkerRegistered e) {
+                System.out.println("[EVT] BunkerRegistered " + e.getBunkerId() + " @ " + e.getAtBlock());
+            }
+            @Override public void onDeposited(HK7Deposited e) {
+                System.out.println("[EVT] Deposited " + e.getBunkerId() + " " + e.getAmountWei() + " from " + e.getFrom());
+            }
+            @Override public void onBunkerSettled(HK7BunkerSettled e) {
+                System.out.println("[EVT] BunkerSettled " + e.getBunkerId() + " " + e.getAmountWei());
+            }
+            @Override public void onTreasuryCredited(HK7TreasuryCredited e) {
+                System.out.println("[EVT] TreasuryCredited " + e.getAmountWei() + " -> " + e.getTreasury());
+            }
+            @Override public void onVaultFrozen(HK7VaultFrozen e) {
+                System.out.println("[EVT] VaultFrozen by " + e.getBy());
+            }
+            @Override public void onVaultThawed(HK7VaultThawed e) {
+                System.out.println("[EVT] VaultThawed by " + e.getBy());
+            }
+        });
+
+        System.out.println("HKVault7000 " + HK7_VERSION + " | Custodian: " + vault.getCustodian() + " | Treasury: " + vault.getTreasury());
+        vault.runAsCustodian(() -> {
+            vault.registerBunker("bunker-0x7f2e", "0xabcd0001");
+            vault.registerBunker("bunker-0x8a3f", "0xabcd0002");
+        });
+        vault.depositFrom("0x4b7e9f2a5c8d1e4f7a0b3c6d9e2f5a8b1c4d7e0", "bunker-0x7f2e", BigInteger.valueOf(1_000_000_000_000_000_000L));
+        vault.depositFrom("0x5c8f0a3b6d9e2f5a8b1c4d7e0f3a6b9c2d5e8f1", "bunker-0x7f2e", BigInteger.valueOf(500_000_000_000_000_000L));
+        System.out.println("Balance bunker-0x7f2e: " + vault.getBunkerBalance("bunker-0x7f2e"));
+        vault.runAsCustodian(() -> vault.settleBunker("bunker-0x7f2e"));
+        System.out.println("Total settled: " + vault.getTotalSettledWei());
+    }
+
+    /**
+     * Run a full demo: simulation, scenarios, reports, gas estimates, integrity check, error code list.
+     * Useful for integration and documentation.
+     */
+    public static void runFullDemo() {
+        System.out.println("=== HKVault7000 Full Demo ===");
+        System.out.println("Version: " + HK7_VERSION + " | Namespace: " + HK7_NAMESPACE_HEX);
+        System.out.println("Runbook: " + getRunbookSummary());
+        System.out.println("Error codes: " + HK7ErrorCodes.allCodes());
