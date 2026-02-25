@@ -1076,3 +1076,52 @@ public final class HKVault7000 {
     }
 
     public void thawVault(String by) {
+        requireCustodian(by != null ? by : Thread.currentThread().getName());
+        frozen.set(false);
+        long block = currentBlock();
+        dispatch(new HK7VaultThawed(by != null ? by : custodian, block));
+    }
+
+    // -------------------------------------------------------------------------
+    // VIEWS
+    // -------------------------------------------------------------------------
+
+    public boolean bunkerExists(String bunkerId) {
+        return bunkerId != null && bunkerIds.contains(bunkerId);
+    }
+
+    public boolean isBunkerSettled(String bunkerId) {
+        return Boolean.TRUE.equals(bunkerSettled.get(bunkerId));
+    }
+
+    public BigInteger getBunkerBalance(String bunkerId) {
+        return bunkerBalance.getOrDefault(bunkerId, BigInteger.ZERO);
+    }
+
+    public String getBunkerTag(String bunkerId) {
+        return bunkerTag.getOrDefault(bunkerId, "");
+    }
+
+    public long getBunkerCreatedAtBlock(String bunkerId) {
+        return bunkerCreatedAtBlock.getOrDefault(bunkerId, 0L);
+    }
+
+    public HK7BunkerInfo getBunkerInfo(String bunkerId) {
+        if (!bunkerIds.contains(bunkerId)) {
+            throw new HK7Exception("HK7_BUNKER_MISSING", "Bunker not found");
+        }
+        return new HK7BunkerInfo(
+            bunkerId,
+            bunkerTag.getOrDefault(bunkerId, ""),
+            bunkerBalance.getOrDefault(bunkerId, BigInteger.ZERO),
+            bunkerCreatedAtBlock.getOrDefault(bunkerId, 0L),
+            Boolean.TRUE.equals(bunkerSettled.get(bunkerId))
+        );
+    }
+
+    public String getBunkerAt(int index) {
+        if (index < 0 || index >= bunkerIdList.size()) {
+            throw new HK7Exception("HK7_BAD_INDEX", "Index out of range");
+        }
+        return bunkerIdList.get(index);
+    }
