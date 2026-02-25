@@ -978,3 +978,52 @@ public final class HKVault7000 {
         }
     }
 
+    // -------------------------------------------------------------------------
+    // PUBLIC: DEPOSIT
+    // -------------------------------------------------------------------------
+
+    /**
+     * Deposit wei into an existing bunker. Reentrancy-safe, fails if frozen or bunker settled.
+     * Enforces min/max per vault config and quota caps when applicable.
+     */
+    public void deposit(String bunkerId, String from, BigInteger amountWei) {
+        requireNotFrozen();
+        requireValidBunkerId(bunkerId);
+        requireBunkerExists(bunkerId);
+        requireBunkerNotSettled(bunkerId);
+        if (HK7WeiMath.isZeroOrNegative(amountWei)) {
+            throw new HK7Exception("HK7_ZERO_AMT", "Deposit amount must be positive");
+        }
+        if (vaultConfig.getMinDepositWei().signum() > 0 && amountWei.compareTo(vaultConfig.getMinDepositWei()) < 0) {
+            throw new HK7Exception("HK7_ZERO_AMT", "Below minimum deposit");
+        }
+        if (vaultConfig.getMaxDepositPerTxWei().signum() > 0 && amountWei.compareTo(vaultConfig.getMaxDepositPerTxWei()) > 0) {
+            throw new HK7Exception("HK7_ZERO_AMT", "Above max deposit per tx");
+        }
+        synchronized (reentrancyLock) {
+            BigInteger prev = bunkerBalance.getOrDefault(bunkerId, BigInteger.ZERO);
+            if (quotaManager.wouldExceedBunkerCap(bunkerId, prev, amountWei)) {
+                throw new HK7Exception("HK7_BUNKER_CAP", "Bunker deposit cap exceeded");
+            }
+            BigInteger globalNow = BigInteger.valueOf(totalDeposited.get());
+            if (quotaManager.wouldExceedGlobalCap(globalNow, amountWei)) {
+                throw new HK7Exception("HK7_BUNKER_CAP", "Global deposit cap exceeded");
+            }
+            BigInteger next = HK7WeiMath.addSafe(prev, amountWei);
+            bunkerBalance.put(bunkerId, next);
+            totalDeposited.addAndGet(amountWei.longValue());
+            depositLedger.recordDeposit(bunkerId, from, amountWei);
+            auditLog.append("DEPOSIT", from != null ? from : "0x0", "bunker=" + bunkerId + " amount=" + amountWei);
+        }
+        long block = currentBlock();
+        HK7Deposited ev = new HK7Deposited(bunkerId, from != null ? from : "0x0000000000000000000000000000000000000000", amountWei, block);
+        dispatch(ev);
+    }
+
+    public void depositFrom(String sender, String bunkerId, BigInteger amountWei) {
+        deposit(bunkerId, sender, amountWei);
+    }
+
+    // -------------------------------------------------------------------------
+    // CUSTODIAN: SETTLE BUNKER (send balance to treasury)
+    // -------------------------------------------------------------------------
