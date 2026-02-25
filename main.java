@@ -1370,3 +1370,52 @@ public final class HKVault7000 {
     }
 
     /** Get preconditions for depositing into a bunker. */
+    public List<String> getDepositPreconditions(String bunkerId, BigInteger amountWei) {
+        return HK7Runbook.preconditionsForDeposit(this, bunkerId, amountWei);
+    }
+
+    /** Get preconditions for settling a bunker. */
+    public List<String> getSettlePreconditions(String bunkerId) {
+        return HK7Runbook.preconditionsForSettle(this, bunkerId);
+    }
+
+    private long currentBlock() {
+        return System.currentTimeMillis() / 1000L;
+    }
+
+    // -------------------------------------------------------------------------
+    // EVENT DISPATCH
+    // -------------------------------------------------------------------------
+
+    private void dispatch(HK7BunkerRegistered e) {
+        synchronized (listeners) {
+            for (HK7EventListener L : listeners) L.onBunkerRegistered(e);
+        }
+    }
+    private void dispatch(HK7Deposited e) {
+        synchronized (listeners) {
+            for (HK7EventListener L : listeners) L.onDeposited(e);
+        }
+    }
+    private void dispatch(HK7BunkerSettled e) {
+        synchronized (listeners) {
+            for (HK7EventListener L : listeners) L.onBunkerSettled(e);
+        }
+    }
+    private void dispatch(HK7TreasuryCredited e) {
+        synchronized (listeners) {
+            for (HK7EventListener L : listeners) L.onTreasuryCredited(e);
+        }
+    }
+    private void dispatch(HK7VaultFrozen e) {
+        synchronized (listeners) {
+            for (HK7EventListener L : listeners) L.onVaultFrozen(e);
+        }
+    }
+    private void dispatch(HK7VaultThawed e) {
+        synchronized (listeners) {
+            for (HK7EventListener L : listeners) L.onVaultThawed(e);
+        }
+    }
+
+    public void addEventListener(HK7EventListener listener) {
