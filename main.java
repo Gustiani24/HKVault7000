@@ -1419,3 +1419,52 @@ public final class HKVault7000 {
     }
 
     public void addEventListener(HK7EventListener listener) {
+        if (listener != null) listeners.add(listener);
+    }
+
+    public void removeEventListener(HK7EventListener listener) {
+        listeners.remove(listener);
+    }
+
+    // -------------------------------------------------------------------------
+    // VAULT METRICS (DeFi-style aggregates)
+    // -------------------------------------------------------------------------
+
+    public BigInteger getTotalDepositedWei() {
+        return BigInteger.valueOf(totalDeposited.get());
+    }
+
+    public BigInteger getTotalSettledWei() {
+        return BigInteger.valueOf(totalSettled.get());
+    }
+
+    public int getActiveBunkerCount() {
+        int n = 0;
+        for (String id : bunkerIds) {
+            if (!Boolean.TRUE.equals(bunkerSettled.get(id))) n++;
+        }
+        return n;
+    }
+
+    public BigInteger getVaultTotalBalance() {
+        BigInteger sum = BigInteger.ZERO;
+        for (String id : bunkerIds) {
+            if (!Boolean.TRUE.equals(bunkerSettled.get(id))) {
+                sum = sum.add(bunkerBalance.getOrDefault(id, BigInteger.ZERO));
+            }
+        }
+        return HK7WeiMath.clampU256(sum);
+    }
+
+    // -------------------------------------------------------------------------
+    // SIMULATION HELPERS (for testing / off-chain use)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Run as custodian for the next call (thread-local simulation).
+     */
+    public void runAsCustodian(Runnable action) {
+        String prev = Thread.currentThread().getName();
+        Thread.currentThread().setName(custodian);
+        try {
+            action.run();
