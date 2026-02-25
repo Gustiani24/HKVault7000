@@ -1174,3 +1174,52 @@ public final class HKVault7000 {
             if (bunkerIds.contains(id)) {
                 out.add(new HK7BunkerInfo(
                     id,
+                    bunkerTag.getOrDefault(id, ""),
+                    bunkerBalance.getOrDefault(id, BigInteger.ZERO),
+                    bunkerCreatedAtBlock.getOrDefault(id, 0L),
+                    Boolean.TRUE.equals(bunkerSettled.get(id))
+                ));
+            }
+        }
+        return out;
+    }
+
+    /** All bunker ids (copy). */
+    public List<String> getAllBunkerIds() {
+        synchronized (bunkerIdList) {
+            return new ArrayList<>(bunkerIdList);
+        }
+    }
+
+    /** Bunker ids that are not yet settled. */
+    public List<String> getActiveBunkerIds() {
+        List<String> out = new ArrayList<>();
+        for (String id : bunkerIdList) {
+            if (!Boolean.TRUE.equals(bunkerSettled.get(id))) out.add(id);
+        }
+        return out;
+    }
+
+    /** Bunker ids that are settled. */
+    public List<String> getSettledBunkerIds() {
+        List<String> out = new ArrayList<>();
+        for (String id : bunkerIdList) {
+            if (Boolean.TRUE.equals(bunkerSettled.get(id))) out.add(id);
+        }
+        return out;
+    }
+
+    /** Compute total balance across all active bunkers (same as getVaultTotalBalance). */
+    public BigInteger computeTotalActiveBalance() {
+        return getVaultTotalBalance();
+    }
+
+    /** Whether the vault has any active (unsettled) bunkers with positive balance. */
+    public boolean hasActiveBalance() {
+        return getVaultTotalBalance().compareTo(BigInteger.ZERO) > 0;
+    }
+
+    /** Recent audit entries. */
+    public List<HK7AuditEntry> getAuditRecent(int n) {
+        return auditLog.getRecent(n);
+    }
