@@ -1664,3 +1664,52 @@ public final class HKVault7000 {
         }
     }
 
+    // -------------------------------------------------------------------------
+    // CONSTANTS EXPOSED FOR INTEGRATION
+    // -------------------------------------------------------------------------
+
+    public static final String HK7_CHAIN_ID_DEFAULT = "0xfa2b";
+    public static final BigInteger HK7_ONE_ETH_WEI = BigInteger.TEN.pow(18);
+    public static final int HK7_DEFAULT_FEE_BPS = 30;
+    public static final String HK7_ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+    // -------------------------------------------------------------------------
+    // SCENARIO HELPERS (deterministic flows for testing / simulation)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Scenario A: Single bunker, one depositor, then settle.
+     */
+    public static HKVault7000 scenarioSingleBunkerSingleDeposit() {
+        HKVault7000 v = new HKVault7000();
+        v.runAsCustodian(() -> v.registerBunker("scenario-a-1", "0xaa01"));
+        v.depositFrom("0x4b7e9f2a5c8d1e4f7a0b3c6d9e2f5a8b1c4d7e0", "scenario-a-1", HK7_ONE_ETH_WEI);
+        v.runAsCustodian(() -> v.settleBunker("scenario-a-1"));
+        return v;
+    }
+
+    /**
+     * Scenario B: Multiple bunkers, multiple depositors per bunker.
+     */
+    public static HKVault7000 scenarioMultiBunkerMultiDeposit(int bunkers, int depositorsEach) {
+        HKVault7000 v = new HKVault7000();
+        List<String> depositors = List.of(
+            "0x4b7e9f2a5c8d1e4f7a0b3c6d9e2f5a8b1c4d7e0",
+            "0x5c8f0a3b6d9e2f5a8b1c4d7e0f3a6b9c2d5e8f1",
+            "0x6d0e1f3a5c8b2d4e6f8a0b2c4d6e8f0a2b4c6d8e0"
+        );
+        v.runAsCustodian(() -> {
+            for (int i = 0; i < bunkers && i < HK7_MAX_BUNKERS; i++) {
+                v.registerBunker("scenario-b-" + i, "0xbb" + i);
+            }
+        });
+        for (int b = 0; b < bunkers; b++) {
+            String bid = "scenario-b-" + b;
+            if (!v.bunkerExists(bid)) continue;
+            for (int d = 0; d < depositorsEach; d++) {
+                v.depositFrom(depositors.get(d % depositors.size()), bid, HK7_ONE_ETH_WEI.multiply(BigInteger.valueOf(d + 1)));
+            }
+        }
+        return v;
+    }
+
