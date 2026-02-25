@@ -1027,3 +1027,52 @@ public final class HKVault7000 {
     // -------------------------------------------------------------------------
     // CUSTODIAN: SETTLE BUNKER (send balance to treasury)
     // -------------------------------------------------------------------------
+
+    /**
+     * Settle a bunker: mark as settled and credit its balance to treasury (simulated).
+     * Fee is computed via fee calculator; net goes to treasury. In a real EVM contract this would perform actual transfers.
+     */
+    public void settleBunker(String bunkerId) {
+        requireCustodian(Thread.currentThread().getName());
+        requireNotFrozen();
+        requireValidBunkerId(bunkerId);
+        requireBunkerExists(bunkerId);
+        requireBunkerNotSettled(bunkerId);
+        synchronized (reentrancyLock) {
+            BigInteger amount = bunkerBalance.getOrDefault(bunkerId, BigInteger.ZERO);
+            bunkerSettled.put(bunkerId, Boolean.TRUE);
+            if (amount.compareTo(BigInteger.ZERO) > 0) {
+                BigInteger fee = feeCalculator.computeFee(amount);
+                BigInteger netToTreasury = feeCalculator.amountAfterFee(amount);
+                totalSettled.addAndGet(amount.longValue());
+                long block = currentBlock();
+                dispatch(new HK7TreasuryCredited(treasury, netToTreasury, block));
+                auditLog.append("SETTLE", custodian, "bunker=" + bunkerId + " amount=" + amount + " fee=" + fee + " toTreasury=" + netToTreasury);
+            }
+            long block = currentBlock();
+            dispatch(new HK7BunkerSettled(bunkerId, bunkerBalance.getOrDefault(bunkerId, BigInteger.ZERO), block));
+        }
+    }
+
+    public void settleBunkerFrom(String sender, String bunkerId) {
+        String prev = Thread.currentThread().getName();
+        try {
+            Thread.currentThread().setName(sender != null ? sender : custodian);
+            settleBunker(bunkerId);
+        } finally {
+            Thread.currentThread().setName(prev);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // CUSTODIAN: FREEZE / THAW
+    // -------------------------------------------------------------------------
+
+    public void freezeVault(String by) {
+        requireCustodian(by != null ? by : Thread.currentThread().getName());
+        frozen.set(true);
+        long block = currentBlock();
+        dispatch(new HK7VaultFrozen(by != null ? by : custodian, block));
+    }
+
+    public void thawVault(String by) {
