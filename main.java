@@ -1860,3 +1860,52 @@ public final class HKVault7000 {
     public static final int HK7_BPS_DENOMINATOR = 10_000;
     /** Default minimum deposit in wei (1e15 = 0.001 ETH). */
     public static final BigInteger HK7_DEFAULT_MIN_DEPOSIT_WEI = BigInteger.valueOf(1_000_000_000_000_000L);
+    /** Default max deposit per tx in wei (500 ETH). */
+    public static final BigInteger HK7_DEFAULT_MAX_DEPOSIT_PER_TX_WEI = BigInteger.valueOf(500).multiply(BigInteger.TEN.pow(18));
+
+    // -------------------------------------------------------------------------
+    // VALIDATION AND BOUNDS (for off-chain or pre-flight checks)
+    // -------------------------------------------------------------------------
+
+    /** Return true if bunker id is valid format. */
+    public static boolean isValidBunkerIdFormat(String bunkerId) {
+        return HK7VaultEngine.isValidBunkerId(bunkerId);
+    }
+
+    /** Return true if tag hash is valid format. */
+    public static boolean isValidTagHashFormat(String tagHash) {
+        return HK7VaultEngine.isValidTagHash(tagHash);
+    }
+
+    /** Check amount is within min/max from config. */
+    public boolean isAmountWithinConfig(BigInteger amountWei) {
+        if (amountWei == null || amountWei.signum() <= 0) return false;
+        if (vaultConfig.getMinDepositWei().signum() > 0 && amountWei.compareTo(vaultConfig.getMinDepositWei()) < 0) return false;
+        if (vaultConfig.getMaxDepositPerTxWei().signum() > 0 && amountWei.compareTo(vaultConfig.getMaxDepositPerTxWei()) > 0) return false;
+        return true;
+    }
+
+    /** Check remaining capacity for a bunker before hitting cap. */
+    public BigInteger getBunkerRemainingCap(String bunkerId) {
+        BigInteger cap = quotaManager.getBunkerCap(bunkerId);
+        if (cap.signum() == 0) return BigInteger.valueOf(-1);
+        BigInteger current = getBunkerBalance(bunkerId);
+        BigInteger rem = cap.subtract(current);
+        return rem.signum() < 0 ? BigInteger.ZERO : rem;
+    }
+
+    /** Check remaining global capacity. */
+    public BigInteger getGlobalRemainingCap() {
+        BigInteger cap = quotaManager.getGlobalDepositCap();
+        if (cap.signum() == 0) return BigInteger.valueOf(-1);
+        BigInteger current = getTotalDepositedWei();
+        BigInteger rem = cap.subtract(current);
+        return rem.signum() < 0 ? BigInteger.ZERO : rem;
+    }
+
+    /** Return number of bunkers that can still be registered. */
+    public long getRemainingBunkerSlots() {
+        long n = bunkerCount.get();
+        return n >= HK7_MAX_BUNKERS ? 0 : (HK7_MAX_BUNKERS - n);
+    }
+
