@@ -1958,3 +1958,52 @@ public final class HKVault7000 {
     //
     // 2. Register bunker (as custodian): vault.runAsCustodian(() -> vault.registerBunker("bunker-1", "0xaa"));
     //
+    // 3. Deposit: vault.depositFrom("0x...", "bunker-1", BigInteger.TEN.pow(18));
+    //
+    // 4. Settle (as custodian): vault.runAsCustodian(() -> vault.settleBunker("bunker-1"));
+    //
+    // 5. Freeze: vault.runAsCustodian(() -> vault.freezeVault(vault.getCustodian()));
+    //
+    // 6. Thaw: vault.runAsCustodian(() -> vault.thawVault(vault.getCustodian()));
+    //
+    // 7. Views: vault.getBunkerBalance("bunker-1"), vault.getVaultStats(), vault.getBunkerInfo("bunker-1")
+    //
+    // 8. Reports: vault.exportSummary(), vault.buildBunkerCsvReport(), vault.getAuditRecent(10)
+    //
+    // 9. Integrity: String err = vault.runIntegrityCheck(); if (err != null) { ... }
+    //
+    // 10. Pre-flight: vault.wouldDepositSucceed("bunker-1", amount), vault.getDepositPreconditions("bunker-1", amount)
+    //
+    // -------------------------------------------------------------------------
+
+    // -------------------------------------------------------------------------
+    // STATIC PRE-FLIGHT VALIDATORS (no state change)
+    // -------------------------------------------------------------------------
+
+    /** Returns list of reasons why deposit would fail; empty if would succeed. */
+    public static List<String> validateDeposit(HKVault7000 vault, String bunkerId, String from, BigInteger amountWei) {
+        List<String> reasons = new ArrayList<>();
+        if (vault == null) { reasons.add("Vault is null"); return reasons; }
+        reasons.addAll(vault.getDepositPreconditions(bunkerId, amountWei));
+        if (from != null && HK7EncodingUtils.isZeroAddress(from)) reasons.add("Depositor is zero address");
+        return reasons;
+    }
+
+    /** Returns list of reasons why register would fail; empty if would succeed. */
+    public static List<String> validateRegister(HKVault7000 vault, String bunkerId, String tagHash) {
+        List<String> reasons = new ArrayList<>();
+        if (vault == null) { reasons.add("Vault is null"); return reasons; }
+        reasons.addAll(vault.getRegisterPreconditions());
+        if (!HK7VaultEngine.isValidBunkerId(bunkerId)) reasons.add("Invalid bunker id format");
+        if (!HK7VaultEngine.isValidTagHash(tagHash)) reasons.add("Invalid tag hash format");
+        if (vault.bunkerExists(bunkerId)) reasons.add("Bunker already exists");
+        return reasons;
+    }
+
+    /** Returns list of reasons why settle would fail; empty if would succeed. */
+    public static List<String> validateSettle(HKVault7000 vault, String bunkerId) {
+        List<String> reasons = new ArrayList<>();
+        if (vault == null) { reasons.add("Vault is null"); return reasons; }
+        reasons.addAll(vault.getSettlePreconditions(bunkerId));
+        return reasons;
+    }
