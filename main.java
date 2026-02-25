@@ -1909,3 +1909,52 @@ public final class HKVault7000 {
         return n >= HK7_MAX_BUNKERS ? 0 : (HK7_MAX_BUNKERS - n);
     }
 
+    /** True if vault is in a state where deposits are accepted. */
+    public boolean acceptsDeposits() {
+        return !frozen.get();
+    }
+
+    /** True if vault is in a state where bunker registration is accepted. */
+    public boolean acceptsRegistration() {
+        return !frozen.get() && bunkerCount.get() < HK7_MAX_BUNKERS;
+    }
+
+    /** True if vault is in a state where settle is allowed (custodian still required). */
+    public boolean acceptsSettle() {
+        return !frozen.get();
+    }
+
+    /** Get fee recipient from config. */
+    public String getFeeRecipient() {
+        return vaultConfig.getFeeRecipientHex();
+    }
+
+    /** Get chain id from config. */
+    public String getChainId() {
+        return vaultConfig.getChainIdHex();
+    }
+
+    /** Get min deposit wei from config. */
+    public BigInteger getMinDepositWei() {
+        return vaultConfig.getMinDepositWei();
+    }
+
+    /** Get max deposit per tx wei from config. */
+    public BigInteger getMaxDepositPerTxWei() {
+        return vaultConfig.getMaxDepositPerTxWei();
+    }
+
+    /** Engine anchor (namespace) for cross-reference. */
+    public static String getEngineAnchor() {
+        return HK7VaultEngine.getAnchor();
+    }
+
+    // -------------------------------------------------------------------------
+    // USAGE EXAMPLE (inline reference; no execution)
+    // -------------------------------------------------------------------------
+    //
+    // 1. Construct: HKVault7000 vault = new HKVault7000();
+    //    Custodian and treasury are already set to immutable addresses.
+    //
+    // 2. Register bunker (as custodian): vault.runAsCustodian(() -> vault.registerBunker("bunker-1", "0xaa"));
+    //
