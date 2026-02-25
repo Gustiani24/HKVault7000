@@ -880,3 +880,52 @@ public final class HKVault7000 {
         this.quotaManager = new HK7QuotaManager(
             BigInteger.valueOf(1000).multiply(BigInteger.TEN.pow(18)),
             BigInteger.valueOf(100).multiply(BigInteger.TEN.pow(18))
+        );
+        this.depositLedger = new HK7DepositLedger();
+        this.auditLog = new HK7AuditLog();
+        this.vaultConfig = new HK7VaultConfig(
+            "0xfa2b",
+            BigInteger.valueOf(1_000_000_000_000_000L),
+            BigInteger.valueOf(500).multiply(BigInteger.TEN.pow(18)),
+            30,
+            "0x6d0e1f3a5c8b2d4e6f8a0b2c4d6e8f0a2b4c6d8e0"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // ACCESSORS (immutable fields)
+    // -------------------------------------------------------------------------
+
+    public String getCustodian() { return custodian; }
+    public String getTreasury() { return treasury; }
+    public long getDeployBlock() { return deployBlock; }
+    public boolean isFrozen() { return frozen.get(); }
+    public long getBunkerCount() { return bunkerCount.get(); }
+    public long getTotalDeposited() { return totalDeposited.get(); }
+    public long getTotalSettled() { return totalSettled.get(); }
+
+    // -------------------------------------------------------------------------
+    // GUARDS
+    // -------------------------------------------------------------------------
+
+    private void requireCustodian(String sender) {
+        if (sender == null || !HK7AddressValidator.normalize(sender).equalsIgnoreCase(HK7AddressValidator.normalize(custodian))) {
+            throw new HK7Exception("HK7_NOT_CUSTODIAN", "Caller is not custodian");
+        }
+    }
+
+    private void requireNotFrozen() {
+        if (frozen.get()) throw new HK7Exception("HK7_VAULT_FROZEN", "Vault is frozen");
+    }
+
+    private void requireValidBunkerId(String bunkerId) {
+        if (bunkerId == null || bunkerId.trim().isEmpty()) {
+            throw new HK7Exception("HK7_ZERO_BUNKER", "Bunker id is zero or empty");
+        }
+    }
+
+    private void requireBunkerExists(String bunkerId) {
+        if (!bunkerIds.contains(bunkerId)) {
+            throw new HK7Exception("HK7_BUNKER_MISSING", "Bunker not found");
+        }
+    }
