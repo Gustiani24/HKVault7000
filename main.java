@@ -2007,3 +2007,52 @@ public final class HKVault7000 {
         reasons.addAll(vault.getSettlePreconditions(bunkerId));
         return reasons;
     }
+
+    /** Single consolidated check: vault healthy for normal ops. */
+    public static boolean isVaultHealthy(HKVault7000 vault) {
+        if (vault == null) return false;
+        if (vault.runIntegrityCheck() != null) return false;
+        if (!HK7AddressValidator.isValid(vault.getCustodian())) return false;
+        if (!HK7AddressValidator.isValid(vault.getTreasury())) return false;
+        return true;
+    }
+
+    /** Convert wei to a decimal string (e.g. for display). Assumes 18 decimals. */
+    public static String weiToDecimalString(BigInteger wei, int decimals) {
+        if (wei == null || wei.signum() < 0) return "0";
+        BigInteger div = BigInteger.TEN.pow(decimals);
+        BigInteger intPart = wei.divide(div);
+        BigInteger fracPart = wei.remainder(div);
+        String frac = fracPart.toString();
+        while (frac.length() < decimals) frac = "0" + frac;
+        return intPart + "." + frac;
+    }
+
+    /** Parse decimal string to wei (18 decimals). */
+    public static BigInteger decimalStringToWei(String s, int decimals) {
+        if (s == null || s.trim().isEmpty()) return BigInteger.ZERO;
+        s = s.trim();
+        int dot = s.indexOf('.');
+        String intS = dot >= 0 ? s.substring(0, dot) : s;
+        String fracS = dot >= 0 && dot + 1 < s.length() ? s.substring(dot + 1) : "";
+        while (fracS.length() < decimals) fracS += "0";
+        if (fracS.length() > decimals) fracS = fracS.substring(0, decimals);
+        BigInteger intPart = new BigInteger(intS.isEmpty() ? "0" : intS).multiply(BigInteger.TEN.pow(decimals));
+        BigInteger fracPart = fracS.isEmpty() ? BigInteger.ZERO : new BigInteger(fracS);
+        return intPart.add(fracPart);
+    }
+
+    /** Return true if two addresses are equal (case-insensitive hex). */
+    public static boolean addressesEqual(String a, String b) {
+        if (a == null && b == null) return true;
+        if (a == null || b == null) return false;
+        return HK7AddressValidator.normalize(a).equalsIgnoreCase(HK7AddressValidator.normalize(b));
+    }
+
+    /** Check if caller is custodian (for off-chain simulation). */
+    public boolean isCustodian(String address) {
+        return addressesEqual(custodian, address);
+    }
+
+    /** Check if address is treasury. */
+    public boolean isTreasury(String address) {
