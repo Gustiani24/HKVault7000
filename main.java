@@ -1468,3 +1468,52 @@ public final class HKVault7000 {
         Thread.currentThread().setName(custodian);
         try {
             action.run();
+        } finally {
+            Thread.currentThread().setName(prev);
+        }
+    }
+
+    /**
+     * Simulate block number (for tests that need deterministic blocks).
+     */
+    private volatile long simulatedBlock = 0;
+
+    public void setSimulatedBlock(long block) {
+        this.simulatedBlock = block;
+    }
+
+    public long getCurrentBlockSimulated() {
+        return simulatedBlock > 0 ? simulatedBlock : currentBlock();
+    }
+
+    // -------------------------------------------------------------------------
+    // SNAPSHOT / RECOVERY HELPERS (optional, for audits)
+    // -------------------------------------------------------------------------
+
+    public static final class HK7Snapshot {
+        public final long bunkerCount;
+        public final long totalDeposited;
+        public final long totalSettled;
+        public final boolean frozen;
+        public final List<String> bunkerIds;
+
+        HK7Snapshot(long bunkerCount, long totalDeposited, long totalSettled, boolean frozen, List<String> bunkerIds) {
+            this.bunkerCount = bunkerCount;
+            this.totalDeposited = totalDeposited;
+            this.totalSettled = totalSettled;
+            this.frozen = frozen;
+            this.bunkerIds = bunkerIds != null ? new ArrayList<>(bunkerIds) : List.of();
+        }
+    }
+
+    public HK7Snapshot snapshot() {
+        synchronized (bunkerIdList) {
+            return new HK7Snapshot(
+                bunkerCount.get(),
+                totalDeposited.get(),
+                totalSettled.get(),
+                frozen.get(),
+                new ArrayList<>(bunkerIdList)
+            );
+        }
+    }
