@@ -1615,3 +1615,52 @@ public final class HKVault7000 {
             "0x7e1f2a4b6c8d0e2f4a6b8c0d2e4f6a8b0c2d4e6f8",
             "0x8f2a3b5c7d9e1f3a5b7d9e1f3a5b7d9e1f3a5b7c9"
         );
+        v.runAsCustodian(() -> {
+            for (int i = 0; i < numBunkers && i < HK7_MAX_BUNKERS; i++) {
+                String bid = HK7VaultEngine.deriveBunkerId("sim", i);
+                v.registerBunker(bid, "0x" + Integer.toHexString(i));
+            }
+        });
+        BigInteger oneEth = BigInteger.TEN.pow(18);
+        for (int b = 0; b < numBunkers && b < v.getAllBunkerIds().size(); b++) {
+            String bid = v.getBunkerAt(b);
+            for (int d = 0; d < depositsPerBunker; d++) {
+                String depositor = depositorAddresses.get(d % depositorAddresses.size());
+                v.depositFrom(depositor, bid, oneEth.multiply(BigInteger.valueOf(d + 1)));
+            }
+        }
+        HK7VaultStats stats = v.getVaultStats();
+        System.out.println("Simulation stats: bunkers=" + stats.getBunkerCount() + " active=" + stats.getActiveBunkerCount()
+            + " totalDeposited=" + stats.getTotalDepositedWei() + " vaultBalance=" + stats.getVaultTotalBalance());
+        v.runAsCustodian(() -> {
+            for (String bid : v.getActiveBunkerIds()) v.settleBunker(bid);
+        });
+        System.out.println("After settle: totalSettled=" + v.getTotalSettledWei());
+    }
+
+    // -------------------------------------------------------------------------
+    // BATCH REGISTRATION HELPER
+    // -------------------------------------------------------------------------
+
+    /**
+     * Register multiple bunkers in one logical batch (custodian must call via runAsCustodian).
+     */
+    public void registerBunkersBatch(List<String> bunkerIds, List<String> tagHashes) {
+        if (bunkerIds == null) return;
+        for (int i = 0; i < bunkerIds.size(); i++) {
+            String bid = bunkerIds.get(i);
+            String tag = (tagHashes != null && i < tagHashes.size()) ? tagHashes.get(i) : "";
+            registerBunker(bid, tag);
+        }
+    }
+
+    /**
+     * Settle multiple bunkers in one logical batch (custodian only).
+     */
+    public void settleBunkersBatch(List<String> bunkerIds) {
+        if (bunkerIds == null) return;
+        for (String bid : bunkerIds) {
+            if (bunkerExists(bid) && !isBunkerSettled(bid)) settleBunker(bid);
+        }
+    }
+
